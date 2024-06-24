@@ -98,7 +98,14 @@ func DecodeRecordKey(key kv.Key) (tableID int64, handle int64, err error) {
 	 *   5. understanding the coding rules is a prerequisite for implementing this function,
 	 *      you can learn it in the projection 1-2 course documentation.
 	 */
-	return
+	if len(key) != RecordRowKeyLen || !hasTablePrefix(key) || !hasRecordPrefixSep(key[prefixLen-2:]) {
+		return 0, 0, errInvalidKey.GenWithStack("invalid key - %q", key)
+	}
+	table_id := binary.BigEndian.Uint64(key[tablePrefixLength:])
+	handle_id := binary.BigEndian.Uint64(key[prefixLen:])
+	table_id_decoded := codec.DecodeCmpUintToInt(table_id)
+	handle_id_decoded := codec.DecodeCmpUintToInt(handle_id)
+	return table_id_decoded, handle_id_decoded, nil
 }
 
 // appendTableIndexPrefix appends table index prefix  "t[tableID]_i".
@@ -148,7 +155,17 @@ func DecodeIndexKeyPrefix(key kv.Key) (tableID int64, indexID int64, indexValues
 	 *   5. understanding the coding rules is a prerequisite for implementing this function,
 	 *      you can learn it in the projection 1-2 course documentation.
 	 */
-	return tableID, indexID, indexValues, nil
+	if len(key) <= RecordRowKeyLen || !hasTablePrefix(key) || !hasIndexPrefix(key[prefixLen-2:]) {
+		return 0, 0, nil, errInvalidIndexKey.GenWithStack("invalid index key - %q", key)
+	}
+	table_id := binary.BigEndian.Uint64(key[tablePrefixLength:])
+	index_id := binary.BigEndian.Uint64(key[prefixLen:])
+	index_values := key[RecordRowKeyLen:]
+
+	table_id_decoded := codec.DecodeCmpUintToInt(table_id)
+	index_id_decoded := codec.DecodeCmpUintToInt(index_id)
+
+	return table_id_decoded, index_id_decoded, index_values, nil
 }
 
 // DecodeIndexKey decodes the key and gets the tableID, indexID, indexValues.
@@ -212,6 +229,10 @@ func hasTablePrefix(key kv.Key) bool {
 
 func hasRecordPrefixSep(key kv.Key) bool {
 	return key[0] == recordPrefixSep[0] && key[1] == recordPrefixSep[1]
+}
+
+func hasIndexPrefix(key kv.Key) bool {
+	return key[0] == indexPrefixSep[0] && key[1] == indexPrefixSep[1]
 }
 
 // DecodeMetaKey decodes the key and get the meta key and meta field.

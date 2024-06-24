@@ -101,11 +101,19 @@ func DecodeRecordKey(key kv.Key) (tableID int64, handle int64, err error) {
 	if len(key) != RecordRowKeyLen || !hasTablePrefix(key) || !hasRecordPrefixSep(key[prefixLen-2:]) {
 		return 0, 0, errInvalidKey.GenWithStack("invalid key - %q", key)
 	}
-	table_id := binary.BigEndian.Uint64(key[tablePrefixLength:])
-	handle_id := binary.BigEndian.Uint64(key[prefixLen:])
-	table_id_decoded := codec.DecodeCmpUintToInt(table_id)
-	handle_id_decoded := codec.DecodeCmpUintToInt(handle_id)
-	return table_id_decoded, handle_id_decoded, nil
+	key = key[tablePrefixLength:]
+	key, tableID, err = codec.DecodeInt(key)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	key = key[recordPrefixSepLength:]
+	key, handle, err = codec.DecodeInt(key)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return tableID, handle, nil
 }
 
 // appendTableIndexPrefix appends table index prefix  "t[tableID]_i".
@@ -158,14 +166,20 @@ func DecodeIndexKeyPrefix(key kv.Key) (tableID int64, indexID int64, indexValues
 	if len(key) <= RecordRowKeyLen || !hasTablePrefix(key) || !hasIndexPrefix(key[prefixLen-2:]) {
 		return 0, 0, nil, errInvalidIndexKey.GenWithStack("invalid index key - %q", key)
 	}
-	table_id := binary.BigEndian.Uint64(key[tablePrefixLength:])
-	index_id := binary.BigEndian.Uint64(key[prefixLen:])
-	index_values := key[RecordRowKeyLen:]
+	key = key[tablePrefixLength:]
+	key, tableID, err = codec.DecodeInt(key)
+	if err != nil {
+		return 0, 0, nil, err
+	}
 
-	table_id_decoded := codec.DecodeCmpUintToInt(table_id)
-	index_id_decoded := codec.DecodeCmpUintToInt(index_id)
+	key = key[recordPrefixSepLength:]
+	key, indexID, err = codec.DecodeInt(key)
+	if err != nil {
+		return 0, 0, nil, err
+	}
+	indexValues = key
 
-	return table_id_decoded, index_id_decoded, index_values, nil
+	return tableID, indexID, indexValues, nil
 }
 
 // DecodeIndexKey decodes the key and gets the tableID, indexID, indexValues.

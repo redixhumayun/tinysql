@@ -44,6 +44,7 @@ import (
 	ident string
 	expr ast.ExprNode
 	statement ast.StmtNode
+	joinspec *ast.OnCondition
 }
 
 %token	<ident>
@@ -709,6 +710,8 @@ import (
 	DefaultValueExpr		"DefaultValueExpr(Now or Signed Literal)"
 	NowSymOptionFraction		"NowSym with optional fraction part"
 	CharsetNameOrDefault		"Character set name or default"
+
+%type <joinspec> JoinSpecification
 
 %type	<statement>
 	AdminStmt			"Check table statement or show ddl statement"
@@ -3819,6 +3822,12 @@ JoinTable:
          * }
          *
 	 */
+	 | TableRef JoinType OuterOpt "JOIN" TableRef JoinSpecification
+	 {
+		$$ = &ast.Join {
+			Left: $1.(ast.ResultSetNode), Right: $5.(ast.ResultSetNode), Tp: $2.(ast.JoinType), On: $6
+		}
+	 }
 
 JoinType:
 	"LEFT"
@@ -3829,6 +3838,10 @@ JoinType:
 	{
 		$$ = ast.RightJoin
 	}
+| "INNER"
+	{
+		$$ = ast.InnerJoin
+	}
 
 OuterOpt:
 	{}
@@ -3837,6 +3850,12 @@ OuterOpt:
 CrossOpt:
 	"JOIN"
 |	"INNER" "JOIN"
+
+JoinSpecification:
+	"ON" Expression
+	{
+		$$ = &ast.OnCondition{Expr: $2.(ast.ExprNode)}
+	}
 
 
 LimitClause:

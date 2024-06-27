@@ -92,6 +92,8 @@ func (s *testColumnChangeSuite) TestColumnChange(c *C) {
 	)
 	var checkErr error
 	tc.onJobUpdated = func(job *model.Job) {
+		fmt.Println("running tc.onJobUpdated")
+		fmt.Printf("the prev state: %s, the current job schema state: %s\n", prevState, job.SchemaState)
 		if job.SchemaState == prevState {
 			return
 		}
@@ -304,6 +306,7 @@ func touchedSlice(t table.Table) []bool {
 }
 
 func (s *testColumnChangeSuite) checkAddPublic(sctx sessionctx.Context, d *ddl, writeOnlyTable, publicTable table.Table) error {
+	fmt.Println("calling checkAddPublic")
 	ctx := context.TODO()
 	// publicTable Insert t values (4, 4, 4)
 	err := sctx.NewTxn(ctx)

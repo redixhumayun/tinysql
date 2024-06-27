@@ -58,6 +58,7 @@ func (s *testColumnChangeSuite) TearDownSuite(c *C) {
 }
 
 func (s *testColumnChangeSuite) TestColumnChange(c *C) {
+	fmt.Println("starting test column change")
 	d := newDDL(
 		context.Background(),
 		WithStore(s.store),
@@ -146,6 +147,7 @@ func (s *testColumnChangeSuite) TestColumnChange(c *C) {
 	tb := publicTable
 	mu.Unlock()
 	s.testColumnDrop(c, ctx, d, tb)
+	fmt.Println("done dropping column")
 	s.testAddColumnNoDefault(c, ctx, d, tblInfo)
 }
 
